@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faketagram - Authenticity Feed</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/feather-icons"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fafafa;
+        }
+        .post-container {
+            max-width: 500px;
+            margin: 0 auto;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .liked {
+            fill: #ef4444;
+            stroke: #ef4444;
+        }
+        /* Overlay Panel Styling */
+        .fake-verdict {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Spring effect */
+            height: auto;
+            max-height: 90vh;
+            overflow-y: auto;
+            z-index: 50;
+            border-top-left-radius: 1rem;
+            border-top-right-radius: 1rem;
+        }
+        .fake-verdict.show {
+            transform: translateY(0);
+        }
+        /* Risk Colors */
+        .risk-high {
+            background-color: #fef2f2;
+            border-left: 4px solid #ef4444;
+        }
+        .risk-medium {
+            background-color: #fffbeb;
+            border-left: 4px solid #f59e0b;
+        }
+        .risk-low {
+            background-color: #f0fdf4;
+            border-left: 4px solid #10b981;
+        }
+        /* Main View Switch */
+        #main-feed, #detailed-report-view {
+            min-height: 100vh;
+            padding-bottom: 80px; /* Space for bottom nav */
+        }
+        #detailed-report-view {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    
+    <!-- Instagram-like Header (Sticky) -->
+    <header class="bg-white py-3 px-4 border-b sticky top-0 z-40">
+        <div class="flex justify-between items-center max-w-lg mx-auto">
+            <h1 class="text-2xl font-bold">Instagram</h1>
+            <div class="flex space-x-4">
+                <i data-feather="heart" class="w-6 h-6 text-gray-700"></i>
+                <i data-feather="send" class="w-6 h-6 text-gray-700"></i>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Feed View -->
+    <div id="main-feed">
+        <!-- Posts will be rendered here by JavaScript -->
+    </div>
+
+    <!-- Detailed Report View (Hidden by default) -->
+    <div id="detailed-report-view" class="bg-gray-50 pt-3">
+        <!-- Header for Report View -->
+        <header class="bg-white py-3 px-4 border-b sticky top-[62px] z-30">
+            <div class="flex items-center max-w-3xl mx-auto">
+                <button id="backToFeedBtn" class="mr-4 text-gray-600 hover:text-gray-800">
+                    <i data-feather="arrow-left" class="w-6 h-6"></i>
+                </button>
+                <h1 class="text-xl font-bold">Detailed Analysis Report</h1>
+            </div>
+        </header>
+
+        <main class="max-w-3xl mx-auto px-4 py-6">
+            <div id="report-content">
+                <!-- Detailed Report content will be injected here -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Dynamic Fake Detection Panel (Overlay) -->
+    <div class="fake-verdict p-5" id="verdictPanel">
+        <div class="max-w-lg mx-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Authenticity Report</h2>
+                <button id="closeVerdict" class="text-gray-500 hover:text-gray-800 focus:outline-none">
+                    <i data-feather="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            
+            <!-- Dynamic Summary Section -->
+            <div class="mb-4 p-4 rounded-xl shadow-inner" id="verdict-summary">
+                <!-- Content injected here -->
+            </div>
+
+            <!-- Dynamic Metrics -->
+            <div class="grid grid-cols-3 gap-2 mb-6 text-center text-sm font-medium">
+                <div class="bg-gray-100 p-3 rounded-xl shadow-sm">
+                    <div class="text-2xl font-bold mb-1" id="metric-ai-confidence"></div>
+                    <div class="text-xs text-gray-600">AI Confidence</div>
+                </div>
+                <div class="bg-gray-100 p-3 rounded-xl shadow-sm">
+                    <div class="text-2xl font-bold mb-1" id="metric-red-flags"></div>
+                    <div class="text-xs text-gray-600">Red Flags</div>
+                </div>
+                <div class="bg-gray-100 p-3 rounded-xl shadow-sm">
+                    <div class="text-2xl font-bold mb-1" id="metric-community-votes"></div>
+                    <div class="text-xs text-gray-600">Community Votes</div>
+                </div>
+            </div>
+
+            <!-- Dynamic Key Findings -->
+            <div class="mb-6">
+                <h4 class="font-bold text-gray-700 mb-3">Key Findings:</h4>
+                <ul class="text-sm space-y-2" id="verdict-findings">
+                    <!-- Findings injected here -->
+                </ul>
+            </div>
+
+            <button id="viewFullReportBtn" class="block w-full py-3 bg-blue-500 hover:bg-blue-600 text-white text-center rounded-xl font-semibold shadow-md transition duration-150">
+                View Full Analysis Report
+            </button>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around py-3 z-40">
+        <a href="#" class="text-blue-500">
+            <i data-feather="home" class="w-6 h-6"></i>
+        </a>
+        <a href="#" class="text-gray-700">
+            <i data-feather="search" class="w-6 h-6"></i>
+        </a>
+        <a href="#" class="text-gray-700">
+            <i data-feather="plus-square" class="w-6 h-6"></i>
+        </a>
+        <a href="#" class="text-gray-700">
+            <i data-feather="heart" class="w-6 h-6"></i>
+        </a>
+        <a href="#" class="text-gray-700">
+            <i data-feather="user" class="w-6 h-6"></i>
+        </a>
+    </nav>
+
+    <script>
+        // --- POST DATA ---
+        const posts = [
+            {
+                id: 1,
+                user: 'travel_lover42',
+                profile_img: 'https://placehold.co/200x200/54A0FF/FFFFFF?text=TL',
+                post_img: 'paris.png',
+                caption: 'Just visited this amazing place! The colors are unreal! #travel #wanderlust',
+                time: '2 HOURS AGO',
+                likes: 243,
+                is_liked: false,
+                report: {
+                    risk: 'medium', risk_text: 'Medium Risk of Manipulation', risk_color: 'yellow',
+                    ai_confidence: '68%', red_flags: '3/5', community_votes: '42%',
+                    summary: 'Our analysis detected possible image alterations and inconsistent metadata.',
+                    findings: [
+                        { icon: 'alert-circle', color: 'yellow', text: 'Possible color saturation manipulation detected' },
+                        { icon: 'alert-circle', color: 'yellow', text: 'Metadata shows editing software: Photoshop 2023' },
+                        { icon: 'check', color: 'green', text: 'No AI-generated elements detected' }
+                    ],
+                    detailed: {
+                        image_analysis: '83%', crowd_votes: '42%', context_check: '79%',
+                        forensics: [
+                            { icon: 'alert-triangle', color: 'yellow', text: 'Detected possible color saturation manipulation (+32% from baseline)' },
+                            { icon: 'alert-triangle', color: 'yellow', text: 'Levels adjustment detected in multiple areas' },
+                            { icon: 'check', color: 'green', text: 'No signs of object removal or cloning detected' },
+                        ],
+                        metadata: [
+                            { icon: 'alert-triangle', color: 'yellow', text: 'Editing software: Adobe Photoshop CC 2023' },
+                            { icon: 'alert-triangle', color: 'yellow', text: 'Original capture device not found in metadata' },
+                            { icon: 'check', color: 'green', text: 'No signs of metadata scrubbing' },
+                        ],
+                        search: [
+                            { icon: 'check', color: 'green', text: 'No exact matches found on other sites' },
+                            { icon: 'check', color: 'green', text: 'No matches in known fake image databases' },
+                            { icon: 'alert-triangle', color: 'yellow', text: 'Similar landscapes found but not exact matches' },
+                        ],
+                    }
+                }
+            },
+            {
+                id: 2,
+                user: 'futuristic_art',
+                profile_img: 'https://placehold.co/200x200/7C3AED/FFFFFF?text=AI',
+                post_img: 'athergard.png',
+                caption: 'Behold, the city of Aethelgard. Built only in imagination. #AIGenerated #Midjourney',
+                time: '45 MINUTES AGO',
+                likes: 1205,
+                is_liked: false,
+                report: {
+                    risk: 'high', risk_text: 'High Risk: AI Generation Confirmed', risk_color: 'red',
+                    ai_confidence: '99%', red_flags: '5/5', community_votes: '88%',
+                    summary: 'Image highly likely created using an AI generation model. Visible artifacts detected.',
+                    findings: [
+                        { icon: 'zap', color: 'red', text: 'AI generation model signature detected (99% match)' },
+                        { icon: 'alert-circle', color: 'red', text: 'Inconsistent lighting and distorted architectural elements' },
+                        { icon: 'check', color: 'green', text: 'Poster explicitly marked as #AIGenerated' }
+                    ],
+                    detailed: {
+                        image_analysis: '97%', crowd_votes: '88%', context_check: '95%',
+                        forensics: [
+                            { icon: 'zap', color: 'red', text: 'Specific generative artifact patterns detected throughout the image' },
+                            { icon: 'alert-triangle', color: 'red', text: 'Pixel correlation analysis shows non-photographic origin' },
+                            { icon: 'check', color: 'green', text: 'Sharp edges and unrealistic textures are present' },
+                        ],
+                        metadata: [
+                            { icon: 'zap', color: 'red', text: 'No camera metadata. Creation date mismatch.' },
+                            { icon: 'alert-triangle', color: 'red', text: 'Model tag "Midjourney v5" found in hidden EXIF' },
+                            { icon: 'check', color: 'green', text: 'No signs of further human editing post-generation' },
+                        ],
+                        search: [
+                            { icon: 'check', color: 'green', text: 'No exact matches found (unique AI generation)' },
+                            { icon: 'zap', color: 'red', text: 'Prompt keywords match known AI output trends' },
+                            { icon: 'check', color: 'green', text: 'Style is consistent with generative art' },
+                        ],
+                    }
+                }
+            },
+            {
+                id: 3,
+                user: 'local_news_hub',
+                profile_img: 'https://placehold.co/200x200/059669/FFFFFF?text=LN',
+                post_img: 'marathon.webp',
+                caption: 'Coverage of the annual charity marathon this morning! What a turnout. #localnews #community',
+                time: '1 DAY AGO',
+                likes: 567,
+                is_liked: false,
+                report: {
+                    risk: 'low', risk_text: 'Low Risk: Authenticity Confirmed', risk_color: 'green',
+                    ai_confidence: '95%', red_flags: '0/5', community_votes: '91%',
+                    summary: 'Image analysis, metadata, and cross-reference checks indicate high authenticity.',
+                    findings: [
+                        { icon: 'check', color: 'green', text: 'Matching metadata to camera model (Canon EOS R5)' },
+                        { icon: 'check', color: 'green', text: 'Image timestamp aligns with post time and event details' },
+                        { icon: 'check', color: 'green', text: 'No signs of generative AI or severe manipulation' }
+                    ],
+                    detailed: {
+                        image_analysis: '98%', crowd_votes: '91%', context_check: '99%',
+                        forensics: [
+                            { icon: 'check', color: 'green', text: 'Noise and texture analysis consistent with original capture' },
+                            { icon: 'check', color: 'green', text: 'Minimal JPEG compression artifacts' },
+                            { icon: 'check', color: 'green', text: 'No evidence of splicing or cloning' },
+                        ],
+                        metadata: [
+                            { icon: 'check', color: 'green', text: 'Full EXIF data available, including GPS coordinates' },
+                            { icon: 'check', color: 'green', text: 'Device information (Canon EOS R5) is present' },
+                            { icon: 'check', color: 'green', text: 'Last modified time is within seconds of capture time' },
+                        ],
+                        search: [
+                            { icon: 'check', color: 'green', text: 'Matching images found in local media archives' },
+                            { icon: 'check', color: 'green', text: 'Contextual elements (banners, people) match event records' },
+                            { icon: 'check', color: 'green', text: 'No evidence of prior use or stock image matches' },
+                        ],
+                    }
+                }
+            },
+            {
+                id: 4,
+                user: 'tech_guru_updates',
+                profile_img: 'https://placehold.co/200x200/F97316/FFFFFF?text=TG',
+                post_img: 'office.png',
+                caption: 'Exclusive interview with the CEO on the future of fusion power! Must watch! #tech #innovation',
+                time: '1 HOUR AGO',
+                likes: 15302,
+                is_liked: false,
+                report: {
+                    risk: 'high', risk_text: 'High Risk: Potential Deepfake/Synthetic Media', risk_color: 'red',
+                    ai_confidence: '81%', red_flags: '4/5', community_votes: '61%',
+                    summary: 'Facial analysis detected inconsistencies common in synthetic media and deepfakes.',
+                    findings: [
+                        { icon: 'alert-circle', color: 'red', text: 'Subtle facial anomalies detected in the subject' },
+                        { icon: 'alert-circle', color: 'yellow', text: 'Lack of high-frequency detail consistent with image compression' },
+                        { icon: 'check', color: 'green', text: 'Context (CEO, interview) is plausible' }
+                    ],
+                    detailed: {
+                        image_analysis: '88%', crowd_votes: '61%', context_check: '75%',
+                        forensics: [
+                            { icon: 'alert-triangle', color: 'red', text: 'Eyes and teeth exhibit unnatural smoothness (Deepfake indicator)' },
+                            { icon: 'alert-triangle', color: 'yellow', text: 'Inconsistent shadow mapping around the jawline' },
+                            { icon: 'check', color: 'green', text: 'Background is static and appears authentic' },
+                        ],
+                        metadata: [
+                            { icon: 'alert-triangle', color: 'yellow', text: 'Image is a screenshot (no original camera data)' },
+                            { icon: 'check', color: 'green', text: 'Standard compression metadata detected' },
+                            { icon: 'check', color: 'green', text: 'No known AI generation tags present' },
+                        ],
+                        search: [
+                            { icon: 'alert-triangle', color: 'yellow', text: 'Source video not immediately found via reverse search' },
+                            { icon: 'check', color: 'green', text: 'Subject is a known public figure' },
+                            { icon: 'check', color: 'green', text: 'No exact matches in deepfake databases, but high similarity score' },
+                        ],
+                    }
+                }
+            }
+        ];
+        
+        // State management
+        let currentPostId = null;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            feather.replace();
+            renderPosts();
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            const verdictPanel = document.getElementById('verdictPanel');
+            const closeVerdict = document.getElementById('closeVerdict');
+            const viewFullReportBtn = document.getElementById('viewFullReportBtn');
+            const backToFeedBtn = document.getElementById('backToFeedBtn');
+            
+            // Close verdict overlay
+            closeVerdict.addEventListener('click', function() {
+                verdictPanel.classList.remove('show');
+                document.body.style.overflow = '';
+            });
+
+            // Open detailed report view
+            viewFullReportBtn.addEventListener('click', function() {
+                if (currentPostId) {
+                    showDetailedReport(currentPostId);
+                } else {
+                    console.error("No current post selected for report.");
+                }
+            });
+
+            // Back to feed
+            backToFeedBtn.addEventListener('click', hideDetailedReport);
+        }
+
+        // --- POST RENDERING LOGIC ---
+        function renderPosts() {
+            const feedContainer = document.getElementById('main-feed');
+            feedContainer.innerHTML = posts.map(post => `
+                <div class="post-container bg-white mb-4 rounded-b-xl shadow-sm" data-post-id="${post.id}">
+                    <!-- Post Header -->
+                    <div class="flex items-center p-3">
+                        <div class="w-8 h-8 rounded-full bg-gray-300 mr-3 overflow-hidden">
+                            <img src="${post.profile_img}" alt="Profile" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/200x200/9CA3AF/FFFFFF?text=${post.user.charAt(0)}';">
+                        </div>
+                        <span class="font-semibold">${post.user}</span>
+                    </div>
+
+                    <!-- Post Image -->
+                    <div class="aspect-square bg-gray-100 relative">
+                        <img src="${post.post_img}" alt="Post" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x600/EF4444/FFFFFF?text=Image+Unavailable';">
+                    </div>
+
+                    <!-- Post Actions -->
+                    <div class="p-3">
+                        <div class="flex justify-between items-center mb-3">
+                            <div class="flex space-x-4">
+                                <button class="like-btn focus:outline-none" data-post-id="${post.id}">
+                                    <i data-feather="heart" class="w-6 h-6 hover:text-gray-500 ${post.is_liked ? 'liked' : ''}"></i>
+                                </button>
+                                <button class="focus:outline-none"><i data-feather="message-square" class="w-6 h-6 hover:text-gray-500"></i></button>
+                                <button class="focus:outline-none"><i data-feather="send" class="w-6 h-6 hover:text-gray-500"></i></button>
+                            </div>
+                            <button class="verify-btn px-4 py-1.5 bg-blue-500 text-white rounded-full text-sm font-semibold hover:bg-blue-600 transition" data-post-id="${post.id}">
+                                <i data-feather="shield" class="w-4 h-4 inline-block mr-1 align-sub"></i> Verify
+                            </button>
+                        </div>
+
+                        <!-- Likes -->
+                        <p class="font-semibold mb-2">
+                            <span class="like-count" data-post-id="${post.id}">${post.likes.toLocaleString()}</span> likes
+                        </p>
+
+                        <!-- Caption -->
+                        <p class="mb-2">
+                            <span class="font-semibold">${post.user}</span> ${post.caption}
+                        </p>
+                        
+                        <p class="text-gray-400 text-xs uppercase">${post.time}</p>
+                    </div>
+                </div>
+            `).join('');
+
+            // Attach dynamic event listeners for likes and verification
+            document.querySelectorAll('.like-btn').forEach(btn => {
+                btn.addEventListener('click', handleLikeClick);
+            });
+            document.querySelectorAll('.verify-btn').forEach(btn => {
+                btn.addEventListener('click', handleVerifyClick);
+            });
+            feather.replace(); // Re-render icons after injection
+        }
+
+        // --- INTERACTION HANDLERS ---
+        function handleLikeClick(event) {
+            const btn = event.currentTarget;
+            const postId = parseInt(btn.dataset.postId);
+            const post = posts.find(p => p.id === postId);
+            if (!post) return;
+
+            const icon = btn.querySelector('i');
+            const countElement = document.querySelector(`.like-count[data-post-id="${postId}"]`);
+
+            if (post.is_liked) {
+                post.likes--;
+                icon.classList.remove('liked');
+            } else {
+                post.likes++;
+                icon.classList.add('liked');
+            }
+            post.is_liked = !post.is_liked;
+            countElement.textContent = post.likes.toLocaleString();
+            feather.replace();
+        }
+
+        function handleVerifyClick(event) {
+            const postId = parseInt(event.currentTarget.dataset.postId);
+            const post = posts.find(p => p.id === postId);
+            if (!post) return;
+            
+            currentPostId = postId;
+            populateVerdictPanel(post.report);
+            
+            const verdictPanel = document.getElementById('verdictPanel');
+            verdictPanel.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function populateVerdictPanel(report) {
+            const summaryDiv = document.getElementById('verdict-summary');
+            const findingsList = document.getElementById('verdict-findings');
+            const colorClass = `risk-${report.risk}`;
+            const colorCode = report.risk_color === 'red' ? 'text-red-500' : report.risk_color === 'yellow' ? 'text-yellow-500' : 'text-green-500';
+
+            // 1. Summary
+            summaryDiv.className = `mb-4 p-4 rounded-xl shadow-inner ${colorClass}`;
+            summaryDiv.innerHTML = `
+                <div class="flex items-center mb-2">
+                    <div class="w-3 h-3 rounded-full bg-${report.risk_color}-500 mr-2"></div>
+                    <h3 class="font-bold text-lg">${report.risk_text}</h3>
+                </div>
+                <p class="text-sm text-gray-700">${report.summary}</p>
+            `;
+
+            // 2. Metrics
+            document.getElementById('metric-ai-confidence').textContent = report.ai_confidence;
+            document.getElementById('metric-red-flags').textContent = report.red_flags;
+            document.getElementById('metric-community-votes').textContent = report.community_votes;
+
+            // 3. Key Findings
+            findingsList.innerHTML = report.findings.map(f => `
+                <li class="flex items-start">
+                    <i data-feather="${f.icon}" class="w-4 h-4 mr-2 text-${f.color}-500 flex-shrink-0 mt-1"></i>
+                    <span class="text-gray-700">${f.text}</span>
+                </li>
+            `).join('');
+
+            feather.replace(); // Re-render icons
+        }
+
+        // --- REPORT VIEW LOGIC ---
+        function showDetailedReport(postId) {
+            const post = posts.find(p => p.id === postId);
+            if (!post) return;
+
+            // Hide the feed and overlay, show the report view
+            document.getElementById('main-feed').style.display = 'none';
+            document.getElementById('verdictPanel').classList.remove('show');
+            document.body.style.overflow = '';
+            document.getElementById('detailed-report-view').style.display = 'block';
+
+            renderDetailedReportContent(post);
+            window.scrollTo(0, 0); // Scroll to top of the report
+        }
+
+        function hideDetailedReport() {
+            document.getElementById('main-feed').style.display = 'block';
+            document.getElementById('detailed-report-view').style.display = 'none';
+        }
+
+        function renderDetailedReportContent(post) {
+            const content = document.getElementById('report-content');
+            const R = post.report; // Report data shortcut
+            const colorCode = R.risk_color === 'red' ? 'red' : R.risk_color === 'yellow' ? 'yellow' : 'green';
+            const riskBgClass = `risk-${R.risk}`;
+
+            const renderFindingList = (findings) => findings.map(f => `
+                <li class="flex items-start">
+                    <i data-feather="${f.icon}" class="w-4 h-4 mr-2 text-${f.color}-500 flex-shrink-0 mt-1"></i>
+                    <span class="text-gray-700">${f.text}</span>
+                </li>
+            `).join('');
+            
+            // --- DYNAMIC VISUAL FORENSICS GENERATION ---
+            let forensicTitle = '';
+            let forensicDescription = '';
+            let visualAidUrl = '';
+            let iconColor = 'text-blue-500';
+
+            if (R.risk === 'high' && post.id === 2) { // AI Generation
+                forensicTitle = 'AI Model Signature Map';
+                forensicDescription = 'Heatmap highlighting areas of generative artifact consistency (high confidence = red).';
+                visualAidUrl = 'https://placehold.co/600x400/EF4444/FFFFFF?text=AI+GENERATION+HEATMAP';
+                iconColor = 'text-red-500';
+            } else if (R.risk === 'high' && post.id === 4) { // Deepfake
+                forensicTitle = 'Deepfake Face Map';
+                forensicDescription = 'Pixel inconsistency map focused on facial features (red indicates unnatural smoothness).';
+                visualAidUrl = 'https://placehold.co/600x400/7C3AED/FFFFFF?text=DEEPFAKE+ANALYSIS+MAP';
+                iconColor = 'text-red-500';
+            } else if (R.risk === 'medium') { // Photo Manipulation
+                forensicTitle = 'Error Level Analysis (ELA) Map';
+                forensicDescription = 'ELA reveals areas of unnatural compression, indicating post-processing manipulation.';
+                visualAidUrl = 'https://placehold.co/600x400/F59E0B/FFFFFF?text=ELA+MANIPULATION+MAP';
+                iconColor = 'text-yellow-500';
+            } else { // Low Risk / Authentic
+                forensicTitle = 'Error Level Analysis (ELA) Map';
+                forensicDescription = 'ELA shows uniform compression levels, consistent with authentic capture.';
+                visualAidUrl = 'https://placehold.co/600x400/10B981/FFFFFF?text=ELA+MAP+NO+MANIPULATION';
+                iconColor = 'text-green-500';
+            }
+
+            const forensicVisual = `
+                <!-- Visual Forensics -->
+                <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+                    <h2 class="text-2xl font-bold mb-5 text-gray-800">Visual Forensics</h2>
+
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <!-- Original Image -->
+                        <div class="bg-gray-50 p-3 rounded-xl border border-gray-200">
+                            <h3 class="font-bold text-lg mb-2 flex items-center"><i data-feather="camera" class="w-5 h-5 mr-2 text-gray-500"></i> Original Post Image</h3>
+                            <img src="${post.post_img}" alt="Original Post" class="w-full rounded-lg shadow-inner">
+                            <p class="text-xs text-gray-500 mt-2">Source: Post on Faketagram</p>
+                        </div>
+
+                        <!-- Analysis Map -->
+                        <div class="bg-gray-50 p-3 rounded-xl border border-gray-200">
+                            <h3 class="font-bold text-lg mb-2 flex items-center"><i data-feather="layers" class="w-5 h-5 mr-2 ${iconColor}"></i> ${forensicTitle}</h3>
+                            <img src="${visualAidUrl}" alt="Analysis Visual" class="w-full rounded-lg shadow-inner">
+                            <p class="text-xs text-gray-500 mt-2">${forensicDescription}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            // --- END DYNAMIC VISUAL FORENSICS GENERATION ---
+
+
+            content.innerHTML = `
+                <!-- Post Preview -->
+                <div class="bg-white rounded-xl shadow-md p-4 mb-6">
+                    <div class="flex items-center mb-4">
+                        <div class="w-10 h-10 rounded-full bg-gray-300 mr-3 overflow-hidden">
+                            <img src="${post.profile_img}" alt="Profile" class="w-full h-full object-cover">
+                        </div>
+                        <div>
+                            <p class="font-semibold">${post.user}</p>
+                            <p class="text-gray-500 text-sm">${post.time}</p>
+                        </div>
+                    </div>
+                    <img src="${post.post_img}" alt="Post" class="w-full rounded-lg mb-4">
+                    <p class="mb-1">
+                        <span class="font-semibold">${post.user}</span> ${post.caption}
+                    </p>
+                </div>
+
+                <!-- Risk Assessment -->
+                <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+                    <h2 class="text-2xl font-bold mb-5 text-gray-800">Risk Assessment Overview</h2>
+                    <div class="flex items-center mb-6 p-4 rounded-xl border border-${colorCode}-200 ${riskBgClass}">
+                        <div class="w-16 h-16 rounded-full bg-${colorCode}-500 flex items-center justify-center text-white text-xl font-bold mr-4 shadow-lg">
+                            ${R.ai_confidence}
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-${colorCode}-700">${R.risk_text}</h3>
+                            <p class="text-gray-600">${R.summary}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="w-full bg-gray-200 rounded-full h-2.5 mb-6">
+                        <!-- Risk Meter (Based on AI Confidence) -->
+                        <div class="bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 h-2.5 rounded-full" style="width: ${R.ai_confidence}"></div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-4 text-center">
+                        <div class="p-3 bg-gray-50 rounded-lg">
+                            <div class="text-2xl font-bold mb-1 text-gray-800">${R.detailed.image_analysis}</div>
+                            <div class="text-sm text-gray-500">Image Analysis Score</div>
+                        </div>
+                        <div class="p-3 bg-gray-50 rounded-lg">
+                            <div class="text-2xl font-bold mb-1 text-gray-800">${R.detailed.crowd_votes}</div>
+                            <div class="text-sm text-gray-500">Crowd Votes Authentic</div>
+                        </div>
+                        <div class="p-3 bg-gray-50 rounded-lg">
+                            <div class="text-2xl font-bold mb-1 text-gray-800">${R.detailed.context_check}</div>
+                            <div class="text-sm text-gray-500">Context Check Score</div>
+                        </div>
+                    </div>
+                </div>
+
+                ${forensicVisual}
+                
+                <!-- Detailed Findings -->
+                <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+                    <h2 class="text-2xl font-bold mb-5 text-gray-800">Detailed Findings</h2>
+                    
+                    <div class="space-y-4">
+                        <!-- Image Analysis Card -->
+                        <div class="p-4 rounded-xl border border-gray-200 shadow-sm transition hover:shadow-lg">
+                            <div class="flex items-center mb-3">
+                                <i data-feather="image" class="w-6 h-6 text-blue-500 mr-2"></i>
+                                <h3 class="font-bold text-lg">Image Forensics</h3>
+                            </div>
+                            <ul class="text-sm space-y-2 pl-2 list-none">
+                                ${renderFindingList(R.detailed.forensics)}
+                            </ul>
+                        </div>
+                        
+                        <!-- Metadata Card -->
+                        <div class="p-4 rounded-xl border border-gray-200 shadow-sm transition hover:shadow-lg">
+                            <div class="flex items-center mb-3">
+                                <i data-feather="info" class="w-6 h-6 text-blue-500 mr-2"></i>
+                                <h3 class="font-bold text-lg">Metadata Analysis</h3>
+                            </div>
+                            <ul class="text-sm space-y-2 pl-2 list-none">
+                                ${renderFindingList(R.detailed.metadata)}
+                            </ul>
+                        </div>
+                        
+                        <!-- Reverse Search Card -->
+                        <div class="p-4 rounded-xl border border-gray-200 shadow-sm transition hover:shadow-lg">
+                            <div class="flex items-center mb-3">
+                                <i data-feather="search" class="w-6 h-6 text-blue-500 mr-2"></i>
+                                <h3 class="font-bold text-lg">Reverse Image Search & Context</h3>
+                            </div>
+                            <ul class="text-sm space-y-2 pl-2 list-none">
+                                ${renderFindingList(R.detailed.search)}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Final Verdict & Actions -->
+                <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+                    <h2 class="text-2xl font-bold mb-5 text-gray-800">Final Verdict</h2>
+                    
+                    <div class="p-5 rounded-xl border-4 border-${colorCode}-500 bg-${colorCode}-100/50 mb-6">
+                        <div class="flex items-center mb-2">
+                            <i data-feather="${colorCode === 'green' ? 'check-circle' : 'alert-triangle'}" class="w-6 h-6 text-${colorCode}-600 mr-2"></i>
+                            <h3 class="font-bold text-xl text-${colorCode}-700">${R.risk_text}</h3>
+                        </div>
+                        <p class="text-sm text-gray-800">
+                            ${R.summary}
+                        </p>
+                    </div>
+                    
+                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <h3 class="font-bold text-lg text-gray-800 mb-3">Recommended Actions</h3>
+                        <ul class="text-sm text-gray-700 space-y-2 list-none">
+                            <li class="flex items-start">
+                                <i data-feather="search" class="w-4 h-4 mr-2 flex-shrink-0 mt-1"></i>
+                                <span>Search for the location/subject to verify external information.</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i data-feather="message-square" class="w-4 h-4 mr-2 flex-shrink-0 mt-1"></i>
+                                <span>Be skeptical of claims that rely heavily on the visual evidence presented.</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i data-feather="share-2" class="w-4 h-4 mr-2 flex-shrink-0 mt-1"></i>
+                                <span>Share with caution and note the potential for manipulation/AI generation.</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+            feather.replace(); // Re-render icons for the report
+        }
+    </script>
+</body>
+</html>
